@@ -40,7 +40,7 @@ void log_close(bool flush)
     }
 
     log_output_stream.close();
-    delete log_file_path;
+    log_file_path.clear();
 }
 
 std::string get_current_time_string()
