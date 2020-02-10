@@ -5,18 +5,13 @@
 #include "LogLibrary.h"
 
 
-#ifdef _DEBUG
-#define DEBUG_LOG(fmt, ...) {char b[1024];sprintf_s(b, 1024, fmt, __VA_ARGS__);strcat_s(b, 1024, "\n");OutputDebugString(b);}
-#else
-#define DEBUG_LOG(fmt, ...) {}
-#endif // DEBUG
-
-
 static std::string log_file_path;
 static std::ofstream log_output_stream;
 
 int log_open(std::string file_path)
 {
+    _RPT0(_CRT_WARN, "log_open\n");
+
     // ログファイルのオープン
     log_output_stream.open(file_path, std::ios::app);
 
@@ -45,6 +40,7 @@ void log_close(bool flush)
     }
 
     log_output_stream.close();
+    delete log_file_path;
 }
 
 std::string get_current_time_string()
@@ -53,9 +49,18 @@ std::string get_current_time_string()
     GetLocalTime(&system_time);
 
     char buffer[24];
-    sprintf_s(buffer, 24, "%04d/%02d/%02d %02d:%02d:%02d.%03d",
+    sprintf_s(buffer, sizeof(buffer), "%04d/%02d/%02d %02d:%02d:%02d.%03d",
         system_time.wYear, system_time.wMonth, system_time.wDay,
         system_time.wHour, system_time.wMinute, system_time.wSecond, system_time.wMilliseconds);
+
+    return std::string(buffer);
+}
+
+std::string get_current_thread_id_string()
+{
+    char buffer[14];
+    sprintf_s(buffer, sizeof(buffer), "[%05d-%05d]",
+        GetCurrentProcessId(), GetCurrentThreadId());
 
     return std::string(buffer);
 }
@@ -66,19 +71,17 @@ void log_write(std::string format, ...)
     va_start(args, format);
 
     char arg_format_buffer[4096];
-    vsnprintf(arg_format_buffer, 4096, format.c_str(), args);
-
-    char write_format_buffer[4096];
-    snprintf(write_format_buffer, 4096, "%s\n", get_current_time_string().c_str());
-    DEBUG_LOG("len=%d", strlen(write_format_buffer));
-
-    log_output_stream.write(write_format_buffer, strlen(write_format_buffer));
+    vsnprintf(arg_format_buffer, sizeof(arg_format_buffer), format.c_str(), args);
 
     va_end(args);
-}
 
+    char write_format_buffer[4096];
+    snprintf(write_format_buffer, sizeof(write_format_buffer), "%s %s %s\n",
+        get_current_time_string().c_str(),
+        get_current_thread_id_string().c_str(),
+        arg_format_buffer);
 
-std::string get_current_thread_id_string()
-{
-    return "";
+    log_output_stream.write(write_format_buffer, strlen(write_format_buffer));
+    _RPTN(_CRT_WARN, "%s", write_format_buffer);
+    _RPTN(_CRT_WARN, "%s\n", u8"テスト");
 }
